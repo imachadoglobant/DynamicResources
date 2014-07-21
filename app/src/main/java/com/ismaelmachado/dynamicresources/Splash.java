@@ -4,40 +4,37 @@ import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.octo.android.robospice.SpiceManager;
 import com.octo.android.robospice.UncachedSpiceService;
 import com.octo.android.robospice.persistence.exception.SpiceException;
-import com.octo.android.robospice.request.ProgressByteProcessor;
-import com.octo.android.robospice.request.SpiceRequest;
 import com.octo.android.robospice.request.listener.RequestListener;
 
-import org.springframework.http.HttpEntity;
-import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
-import org.springframework.http.converter.StringHttpMessageConverter;
-import org.springframework.http.converter.json.GsonHttpMessageConverter;
-import org.springframework.web.client.RestTemplate;
-
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
 
-
+/**
+ * Main activity.
+ *
+ * @author ismael.machado
+ */
 public class Splash extends Activity {
 
-    private SpiceManager spiceManager = new SpiceManager(UncachedSpiceService.class);
+    private Button downloadButton;
+    private Button applyButton;
+    private TextView downloadingText;
+    private ImageView imageView;
+
+    private Bitmap bitmap;
+    private SpiceManager spiceManager;
 
     @Override
     protected void onStart() {
@@ -55,28 +52,48 @@ public class Splash extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
-        final ImageView imageView = (ImageView) findViewById(R.id.imageView);
 
-        //ImageDownload task = new ImageDownload("https://preyproject.com/up/2010/12/android_platform.png", imageView);
-        //task.execute();
+        downloadButton = (Button) findViewById(R.id.downloadButton);
+        applyButton = (Button) findViewById(R.id.applyButton);
+        downloadingText = (TextView) findViewById(R.id.downloadingText);
+        imageView = (ImageView) findViewById(R.id.imageView);
 
-        File folder = getFilesDir();
-        File file = new File(folder.getPath() + "image.png");
-        //BinaryRequest request = new BinaryRequest("https://api.amplifire.com/v2/branding/ELVSBG7SU/image", file);
-        BinaryRequest request = new BinaryRequest("https://api.amplifire.com/v2/branding/LYRUB48LE/image", file);
-        spiceManager.execute(request, new RequestListener<InputStream>() {
+        spiceManager = new SpiceManager(UncachedSpiceService.class);
 
+        //Fetch image from branding services
+        downloadButton.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onRequestSuccess(InputStream inputStream) {
-                Bitmap bitmap = BitmapFactory.decodeStream(inputStream);
-                imageView.setImageBitmap(bitmap);
+            public void onClick(View v) {
+                downloadingText.setVisibility(View.VISIBLE);
+                //Determine temp file location
+                File folder = getFilesDir();
+                File file = new File(folder.getPath() + "image.png");
+                //Download image with Robospice
+                BinaryRequest request = new BinaryRequest("https://api.amplifire.com/v2/branding/LYRUB48LE/image", file);
+                spiceManager.execute(request, new RequestListener<InputStream>() {
+
+                    @Override
+                    public void onRequestSuccess(InputStream inputStream) {
+                        downloadingText.setVisibility(View.GONE);
+                        bitmap = BitmapFactory.decodeStream(inputStream);
+                        imageView.setImageBitmap(bitmap);
+                    }
+
+                    @Override
+                    public void onRequestFailure(SpiceException spiceException) {
+                        downloadingText.setVisibility(View.GONE);
+                        Log.d("ERROR", spiceException.getMessage());
+                    }
+                });
+            }
+        });
+
+        //Place image as actionbar icon
+        applyButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
                 BitmapDrawable d = new BitmapDrawable(getResources(), bitmap);
                 getActionBar().setIcon(d);
-            }
-
-            @Override
-            public void onRequestFailure(SpiceException spiceException) {
-                Log.d("ERROR", spiceException.getMessage());
             }
         });
     }
@@ -95,36 +112,6 @@ public class Splash extends Activity {
             return true;
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    private class ImageDownload extends AsyncTask {
-        private String requestUrl;
-        private ImageView view;
-        private Bitmap pic;
-
-        private ImageDownload(String requestUrl, ImageView view) {
-            this.requestUrl = requestUrl;
-            this.view = view;
-        }
-
-        @Override
-        protected Object doInBackground(Object... objects) {
-            try {
-                URL url = new URL(requestUrl);
-                URLConnection conn = url.openConnection();
-                pic = BitmapFactory.decodeStream(conn.getInputStream());
-            } catch (Exception ex) {
-                Log.d("ERROR", ex.getMessage());
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Object o) {
-            view.setImageBitmap(pic);
-            BitmapDrawable d = new BitmapDrawable(getResources(), pic);
-            getActionBar().setIcon(d);
-        }
     }
 
 }

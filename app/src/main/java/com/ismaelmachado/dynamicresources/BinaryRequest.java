@@ -19,7 +19,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 /**
- * Created by ismael.machado on 02/07/14.
+ * Robospice request for downloading binary images from KF server.
+ *
+ * @author ismael.machado
  */
 public class BinaryRequest extends SpiceRequest<InputStream> {
 
@@ -37,6 +39,7 @@ public class BinaryRequest extends SpiceRequest<InputStream> {
     public final InputStream loadDataFromNetwork() throws Exception {
         try {
             final HttpURLConnection httpURLConnection = (HttpURLConnection) new URL(url).openConnection();
+            //CompTIA Prod config
             httpURLConnection.setRequestProperty("Authorization", "Basic S01VQ0FVOFY2Om8xckl0dDU4eGxHREdCZU0=");
             return processStream(httpURLConnection.getContentLength(), httpURLConnection.getInputStream());
         } catch (final MalformedURLException e) {
@@ -55,15 +58,11 @@ public class BinaryRequest extends SpiceRequest<InputStream> {
     public InputStream processStream(int contentLength, InputStream inputStream) throws IOException {
         OutputStream fileOutputStream = null;
         try {
-
             fileOutputStream = new FileOutputStream(cacheFile);
-
             BufferedInputStream is = new BufferedInputStream(inputStream, 8 * 1024);
-
             IOUtils.copy(is, fileOutputStream);
             IOUtils.closeQuietly(is);
             Log.d("Aptoide-Parser", "Writed to " + cacheFile.getAbsolutePath());
-
         } finally {
             IOUtils.closeQuietly(fileOutputStream);
         }
